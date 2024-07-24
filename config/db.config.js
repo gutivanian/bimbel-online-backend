@@ -1,5 +1,9 @@
 const { Pool } = require('pg');
+const fs = require('fs');
 require('dotenv').config();
+
+// Baca CA certificate
+const ca = fs.readFileSync('../ca.pem').toString();
 
 const pool = new Pool({
     host: process.env.DB_HOST,
@@ -7,6 +11,10 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT,
+    ssl: {
+        ca: ca,
+        rejectUnauthorized: true // Set true untuk keamanan yang lebih baik
+    }
 });
 
 module.exports = pool;
