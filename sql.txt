@@ -1,0 +1,25 @@
+-- Membuat tabel user_account
+CREATE TABLE user_account (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(20) REFERENCES users(user_id) ON DELETE CASCADE,
+    nama_lengkap TEXT,
+    nama_panggilan VARCHAR(20),
+    jenis_kelamin VARCHAR(10),
+    tanggal_lahir DATE,
+    nomor_whatsapp BIGINT,
+    provinsi VARCHAR(50),
+    kota VARCHAR(50),
+    kecamatan VARCHAR(50),
+    kelurahan VARCHAR(50),
+    pendidikan_sekarang VARCHAR(50),
+    sekolah VARCHAR(100) NULL,
+    kelas VARCHAR(10) NULL,
+    jurusan VARCHAR(50) NULL,
+    tahun_lulus_sma_smk INTEGER NULL,
+    strata VARCHAR(10) NULL,
+    universitas VARCHAR(100) NULL,
+    program_studi VARCHAR(100) NULL,
+    tahun_masuk INTEGER NULL,
+    pendidikan_terakhir VARCHAR(50) NULL,
+    tahun_lulus INTEGER NULL
+);
