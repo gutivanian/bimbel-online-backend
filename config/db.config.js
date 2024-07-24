@@ -3,7 +3,7 @@ const fs = require('fs');
 require('dotenv').config();
 
 // Baca CA certificate
-const ca = fs.readFileSync('../ca.pem').toString();
+const ca = fs.readFileSync('./ca.pem').toString();
 
 const pool = new Pool({
     host: process.env.DB_HOST,
