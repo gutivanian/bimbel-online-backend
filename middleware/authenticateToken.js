@@ -3,6 +3,7 @@ const secretKey = process.env.JWT_SECRET_KEY;
 
 const authenticateJWT = (req, res, next) => {
     let token = req.cookies.authToken || req.headers['authorization'];
+    console.log('Token:', token); // Log token untuk debugging
 
     if (token) {
         if (token.startsWith('Bearer ')) {

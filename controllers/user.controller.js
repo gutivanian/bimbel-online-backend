@@ -53,8 +53,8 @@ exports.login = (req, res) => {
         }
 
         // Jika login berhasil, buat token JWT
-        const token = jwt.sign({ id: user.id, username: user.username }, secretKey, { expiresIn: '15m' });
-        const refreshToken = jwt.sign({ id: user.id, username: user.username }, refreshTokenSecret);
+        const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, secretKey, { expiresIn: '15m' });
+        const refreshToken = jwt.sign({ id: user.id, username: user.username, role: user.role }, refreshTokenSecret);
 
         refreshTokens.push(refreshToken);
 
@@ -76,7 +76,8 @@ exports.login = (req, res) => {
         res.send({
             message: "Login successful!",
             username: user.username,
-            token // Include token in response
+            role: user.role,
+            token
         });
     });
 };

@@ -2,7 +2,7 @@ const { Pool } = require('pg');
 const fs = require('fs');
 require('dotenv').config();
 
-// Baca CA certificate
+// Read CA certificate
 const ca = fs.readFileSync('./ca.pem').toString();
 
 const pool = new Pool({
@@ -11,10 +11,20 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT,
-    ssl: {
-        ca: ca,
-        rejectUnauthorized: true // Set true untuk keamanan yang lebih baik
+    // ssl: {
+    //     ca: ca,
+    //     rejectUnauthorized: true // Set to true for better security
+    // }
+});
+
+// Test the database connection
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('Error acquiring client', err.stack);
+    } else {
+        console.log('Connected to the database');
     }
+    release();
 });
 
 module.exports = pool;

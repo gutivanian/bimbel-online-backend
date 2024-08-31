@@ -4,13 +4,15 @@ const User = function(user) {
     this.username = user.username;
     this.email = user.email;
     this.password = user.password;
+    this.role = user.role; // Tambahkan role
 };
 
 // Buat pengguna baru
+// Update fungsi create untuk memasukkan role
 User.create = (newUser, result) => {
     pool.query(
-        "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
-        [newUser.username, newUser.email, newUser.password],
+        "INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *",
+        [newUser.username, newUser.email, newUser.password, newUser.role], // Tambahkan role di sini
         (err, res) => {
             if (err) {
                 console.log("error: ", err);

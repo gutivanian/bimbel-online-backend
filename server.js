@@ -9,6 +9,11 @@ const userRoutes = require('./routes/user.routes');
 const userAccountRoutes = require('./routes/userAccount.routes'); // Import userAccount routes
 const courseRoutes = require('./routes/course.routes'); // Import course routes
 const paymentRoutes = require('./routes/payment.routes'); // Import payment routes
+const tryoutRoutes = require('./routes/tryout.routes');
+const userTryoutTestRoutes = require('./routes/userTryoutTest.routes');
+
+const authenticateRole = require('./middleware/authenticateRole'); // Sesuaikan dengan path middleware Anda
+const authenticateJWT = require('./middleware/authenticateToken');
 
 const app = express();
 
@@ -41,6 +46,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/user-accounts', userAccountRoutes); // Use userAccount routes
 app.use('/api/courses', courseRoutes); // Use course routes
 app.use('/api/payments', paymentRoutes); // Use payment routes
+app.use('/api/tryout', tryoutRoutes); // Use to routes
+app.use('/api/user_tryout_tests', userTryoutTestRoutes);  
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

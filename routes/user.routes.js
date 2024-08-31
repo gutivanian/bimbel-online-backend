@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
 const authenticateJWT = require('../middleware/authenticateToken'); // Pastikan pathnya benar
+const authenticateRole = require('../middleware/authenticateRole'); // Import authenticateRole
 
 // Rute untuk memeriksa autentikasi
 router.get('/check-auth', authenticateJWT, (req, res) => {
@@ -10,9 +11,9 @@ router.get('/check-auth', authenticateJWT, (req, res) => {
 });
 
 // Rute untuk mendapatkan user_id berdasarkan username
-router.get('/username/:username', authenticateJWT, userController.findByUsername);
+router.get('/username/:username', authenticateJWT, authenticateRole(['admin', 'user']), userController.findByUsername);
 
-// Rute login
+// Rute login   
 router.post('/login', userController.login);
 
 // Rute register
@@ -23,5 +24,11 @@ router.post('/logout', userController.logout);
 
 // Rute refresh token
 router.post('/refresh-token', userController.refreshToken);
+
+// Contoh rute yang hanya bisa diakses oleh admin
+router.get('/admin/dashboard', authenticateJWT, authenticateRole(['admin']), (req, res) => {
+    res.send('Welcome to the admin dashboard!');
+});
+
 
 module.exports = router;
