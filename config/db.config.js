@@ -11,10 +11,10 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD,  
     database: process.env.DB_NAME,
     port: process.env.DB_PORT,
-    // ssl: {
-    //     ca: ca,
-    //     rejectUnauthorized: true // Set to true for better security
-    // }
+    ssl: {
+        ca: ca,
+        rejectUnauthorized: true // Set to true for better security
+    }
 });
 
 // Test the database connection
