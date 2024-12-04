@@ -1,18 +1,36 @@
 const User = require("../models/user.model");
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const secretKey = process.env.JWT_SECRET_KEY;
 const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
 const refreshTokens = [];
 
 // Fungsi untuk mendaftar pengguna baru
-exports.create = (req, res) => {
+exports.create =async (req, res) => {
     if (!req.body) {
         return res.status(400).send({
             message: "Content cannot be empty!"
         });
     }
 
-    const { username, email, password } = req.body;
+    const { username, email, password, captchaToken } = req.body;
+
+    // Verifikasi CAPTCHA
+    try {
+        const response = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`);
+        const { success } = response.data;
+
+        if (!success) {
+            return res.status(400).send({
+                message: "CAPTCHA verification failed. Please try again."
+            });
+        }
+    } catch (error) {
+        console.error("Error verifying CAPTCHA:", error);
+        return res.status(500).send({
+            message: "Error verifying CAPTCHA."
+        });
+    }
 
     // Buat user baru
     const user = new User({ username, email, password });
@@ -140,6 +158,6 @@ exports.findByUsername = (req, res) => {
             });
         }
         console.log('User found:', user); // Log user yang ditemukan
-        res.send({ user_id: user.user_id });
+        res.send({ user_id: user.user_id, id: user.id });
     });
 };

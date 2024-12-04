@@ -4,7 +4,7 @@ const userController = require('../controllers/user.controller');
 const authenticateJWT = require('../middleware/authenticateToken'); // Pastikan pathnya benar
 const authenticateRole = require('../middleware/authenticateRole'); // Import authenticateRole
 
-// Rute untuk memeriksa autentikasi
+// Rute untuk memeriksa autentikasi 
 router.get('/check-auth', authenticateJWT, (req, res) => {
     console.log('Authenticated user:', req.user);
     res.send({ isAuthenticated: true, username: req.user.username });

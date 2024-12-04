@@ -49,7 +49,7 @@ User.findByUsername = (username, result) => {
         "SELECT * FROM users WHERE username = $1",
         [username],
         (err, res) => {
-            if (err) {
+            if (err) { 
                 console.log("error executing query: ", err); // Log error eksekusi query
                 result(err, null);
                 return;
@@ -64,6 +64,6 @@ User.findByUsername = (username, result) => {
             result(null, res.rows[0]);
         }
     );
-};
+}; 
 
 module.exports = User;

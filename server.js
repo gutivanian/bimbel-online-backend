@@ -8,12 +8,22 @@ const rateLimit = require('express-rate-limit');
 const userRoutes = require('./routes/user.routes');
 const userAccountRoutes = require('./routes/userAccount.routes'); // Import userAccount routes
 const courseRoutes = require('./routes/course.routes'); // Import course routes
-const paymentRoutes = require('./routes/payment.routes'); // Import payment routes
 const tryoutRoutes = require('./routes/tryout.routes');
 const userTryoutTestRoutes = require('./routes/userTryoutTest.routes');
+const questionRoutes = require('./routes/question.routes');
+const examRoutes = require('./routes/exam.routes');
+const examOrderRoutes = require('./routes/examOrder.routes');
+const scoreRoutes = require('./routes/userExamAnswers.routes');
+const userExamRoutes = require('./routes/userExam.routes');
+const examScheduleRoutes = require('./routes/examSchedule.routes');
 
 const authenticateRole = require('./middleware/authenticateRole'); // Sesuaikan dengan path middleware Anda
 const authenticateJWT = require('./middleware/authenticateToken');
+
+const productRoutes = require('./routes/products.routes');
+const orderRoutes = require('./routes/orders.routes');
+const paymentRoutes = require('./routes/payments.routes');
+const transactionRoutes = require('./routes/transaction.routes');
 
 const app = express();
 
@@ -31,7 +41,7 @@ app.use(cookieParser());
 // Rate limit middleware
 const registerLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Maximum 100 requests per windowMs
+  max: 5, // Maximum 100 requests per windowMs
   message: 'Too many accounts created from this IP, please try again later.',
 });
 app.use('/api/users/register', registerLimiter);
@@ -48,6 +58,17 @@ app.use('/api/courses', courseRoutes); // Use course routes
 app.use('/api/payments', paymentRoutes); // Use payment routes
 app.use('/api/tryout', tryoutRoutes); // Use to routes
 app.use('/api/user_tryout_tests', userTryoutTestRoutes);  
+app.use('/api/questions', questionRoutes);
+app.use('/api/exam', examRoutes);
+app.use('/api/examOrder', examOrderRoutes);
+app.use('/api/score', scoreRoutes);
+app.use('/api/userExam', userExamRoutes);
+app.use('/api/exam-schedules', examScheduleRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/transactions', transactionRoutes);
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
