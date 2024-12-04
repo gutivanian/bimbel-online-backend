@@ -29,7 +29,7 @@ const app = express();
 
 // Middleware CORS
 const corsOptions = {
-  origin: 'http://localhost:5173', // Update to your frontend's domain
+  origin: ['http://localhost:5173', 'https://futuredu-frontend.vercel.app'], // Tambahkan URL frontend Vercel Anda
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
 };
