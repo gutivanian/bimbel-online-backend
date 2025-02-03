@@ -11,10 +11,12 @@ const authenticateJWT = (req, res, next) => {
         }
 
         jwt.verify(token, secretKey, (err, user) => {
+            console.log('Verifying token...');
             if (err) {
+                console.error('JWT Verification Error:', err); // Log error untuk debugging
                 return res.sendStatus(403);
             }
-
+            console.log('Token Verified, User:', user); // Log user setelah token diverifikasi
             req.user = user;
             next();
         });

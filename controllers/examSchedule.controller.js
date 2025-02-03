@@ -1,5 +1,49 @@
 const examScheduleModel = require('../models/examSchedule.model');
 
+// Get exam schedules with filters, sorting, and pagination
+const getExamSchedules = async (req, res) => {
+  try {
+    const filters = {
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 50,
+      search: req.query.search || '',
+      exam_type: req.query.exam_type || 'All',
+      isfree: req.query.isfree || 'All',
+      is_valid: req.query.is_valid || 'All',
+      start_time: req.query.start_time || null,
+      end_time: req.query.end_time || null,
+      sortKey: req.query.sortKey || 'es.id',
+      sortOrder: req.query.sortOrder || 'asc',
+      userId: req.query.userId || null, // New Filter
+    }; 
+    // console.log(filters);
+
+    const result = await examScheduleModel.getExamSchedules(filters);
+    // console.log(result)
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching exam schedules:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+// controllers/examSchedule.controller.js
+
+const searchExamSchedules = async (req, res) => {
+  const { search = '', limit = 10, userId = null } = req.query; // Extract userId
+  console.log(req.query); //
+  try {
+    const schedules = await examScheduleModel.searchExamSchedules(search, parseInt(limit, 10), userId);
+    res.status(200).json({ data: schedules });
+  } catch (error) {
+    console.error('Error searching exam schedules:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+
 // Get all valid exam schedules (is_valid = true)
 const getValidExamSchedules = async (req, res) => {
   try {
@@ -86,7 +130,7 @@ const deleteExamSchedule = async (req, res) => {
 const checkExamAccess = async (req, res) => {
   const { username, examId } = req.body;
   console.log(req.body)
-
+  
   try {
     const access = await examScheduleModel.checkAccess(username, examId);
 
@@ -102,6 +146,8 @@ const checkExamAccess = async (req, res) => {
 
 module.exports = {
   checkExamAccess,
+  getExamSchedules,
+  searchExamSchedules,
   getValidExamSchedules,
   getExamScheduleById,
   getExamSchedulesByType,
@@ -109,3 +155,4 @@ module.exports = {
   updateExamSchedule,
   deleteExamSchedule,
 };
+ 

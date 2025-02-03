@@ -8,7 +8,114 @@ const getAllQuestions = async () => {
     console.error('Error fetching questions:', error);
     throw error;
   }
+}; 
+
+
+// models/questionModel.js
+
+const getPagedQuestions = async ({ limit, offset, search, type, examId, userId }) => {
+  try {
+    let query = `
+      SELECT q.id, q.exam_id, e.name AS exam_name, q.question_type, q.question_text, q.options, q.correct_answer
+      FROM questions q
+      LEFT JOIN exams e ON e.id = q.exam_id
+      WHERE 1=1
+    `;
+    const params = [];
+    let paramIndex = 1;
+
+    // Filter berdasarkan search
+    if (search) {
+      query += ` AND (q.question_text ILIKE $${paramIndex} OR CAST(q.id AS TEXT) ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Filter berdasarkan type
+    if (type && type !== 'All') {
+      query += ` AND q.question_type = $${paramIndex}`;
+      params.push(type);
+      paramIndex++;
+    }
+
+    // Filter berdasarkan examId
+    if (examId) {
+      query += ` AND q.exam_id = $${paramIndex}`;
+      params.push(examId);
+      paramIndex++;
+    }
+
+    // Filter berdasarkan userId
+    if (userId) {
+      query += ` AND (q.create_user_id = $${paramIndex} OR q.edit_user_id = $${paramIndex})`;
+      params.push(userId);
+      paramIndex++;
+    }
+
+    // Sorting (misalnya, berdasarkan id ASC)
+    query += ` ORDER BY q.id ASC`;
+
+    // Pagination
+    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching paginated questions:', error);
+    throw error;
+  }
 };
+
+const getTotalQuestions = async ({ search, type, examId, userId }) => {
+  try {
+    let query = `
+      SELECT COUNT(*) AS total
+      FROM questions q
+      LEFT JOIN exams e ON e.id = q.exam_id
+      WHERE 1=1
+    `;
+    const params = [];
+    let paramIndex = 1;
+
+    // Filter berdasarkan search
+    if (search) {
+      query += ` AND (q.question_text ILIKE $${paramIndex} OR CAST(q.id AS TEXT) ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Filter berdasarkan type
+    if (type && type !== 'All') {
+      query += ` AND q.question_type = $${paramIndex}`;
+      params.push(type);
+      paramIndex++;
+    }
+
+    // Filter berdasarkan examId
+    if (examId) {
+      query += ` AND q.exam_id = $${paramIndex}`;
+      params.push(examId);
+      paramIndex++;
+    }
+
+    // Filter berdasarkan userId
+    if (userId) {
+      query += ` AND (q.create_user_id = $${paramIndex} OR q.edit_user_id = $${paramIndex})`;
+      params.push(userId);
+      paramIndex++;
+    }
+
+    const result = await pool.query(query, params);
+    console.log(parseInt(result.rows[0].total, 10))
+    return parseInt(result.rows[0].total, 10);
+  } catch (error) {
+    console.error('Error fetching total questions:', error);
+    throw error;
+  }
+};
+
+
 
 // Fungsi untuk mengambil pertanyaan berdasarkan exam_string
 const getQuestionsByExamString = async (exam_string) => {
@@ -59,11 +166,15 @@ const getQuestionById = async (id) => {
 };
 
 const createQuestion = async (questionData) => {
-  const { exam_id, question_type, question_text, options, correct_answer, statements } = questionData;
+  const { exam_id, question_type, question_text, options, correct_answer, statements, create_user_id } = questionData;
   try {
     const result = await pool.query(
-      'INSERT INTO questions (exam_id, question_type, question_text, options, correct_answer, statements) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [exam_id, question_type, question_text, options, correct_answer, statements]
+      `INSERT INTO questions 
+        (exam_id, question_type, question_text, options, correct_answer, statements, create_user_id) 
+       VALUES 
+        ($1, $2, $3, $4, $5, $6, $7) 
+       RETURNING *`,
+      [exam_id, question_type, question_text, options, correct_answer, statements, create_user_id]
     );
     return result.rows[0];
   } catch (error) {
@@ -72,12 +183,31 @@ const createQuestion = async (questionData) => {
   }
 };
 
+
 const updateQuestion = async (id, questionData) => {
-  const { question_text, question_type, options, correct_answer, statements } = questionData;
+  const { 
+    question_text, 
+    question_type, 
+    options, 
+    correct_answer, 
+    statements, 
+    edit_user_id 
+  } = questionData;
+  
   try {
     const result = await pool.query(
-      'UPDATE questions SET question_text = $1, question_type = $2, options = $3::text[], correct_answer = $4::text[], statements = $5::text[] WHERE id = $6 RETURNING *',
-      [question_text, question_type, options, correct_answer, statements, id]
+      `UPDATE questions 
+       SET 
+         question_text = $1, 
+         question_type = $2, 
+         options = $3::text[], 
+         correct_answer = $4::text[], 
+         statements = $5::text[],
+         edit_user_id = $6,
+         edit_date = NOW()
+       WHERE id = $7 
+       RETURNING *`,
+      [question_text, question_type, options, correct_answer, statements, edit_user_id, id]
     );
     return result.rows[0];
   } catch (error) {
@@ -86,10 +216,26 @@ const updateQuestion = async (id, questionData) => {
   }
 };
 
+const deleteQuestion = async (id) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM questions WHERE id = $1 RETURNING *',
+      [id]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error deleting question:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllQuestions,
+  getPagedQuestions,
+  getTotalQuestions,  // Tambahkan fungsi baru di sini
   getQuestionsByExamString,  // Tambahkan fungsi baru di sini
   getQuestionById,
   createQuestion,
-  updateQuestion
+  updateQuestion,
+  deleteQuestion
 };

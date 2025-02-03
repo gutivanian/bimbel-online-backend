@@ -6,7 +6,10 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 
 const userRoutes = require('./routes/user.routes');
+const roleRoutes = require('./routes/role.routes');
 const userAccountRoutes = require('./routes/userAccount.routes'); // Import userAccount routes
+const userGroupRouter = require('./routes/userGroup.routes'); // Import userGroup routes
+
 const courseRoutes = require('./routes/course.routes'); // Import course routes
 const tryoutRoutes = require('./routes/tryout.routes');
 const userTryoutTestRoutes = require('./routes/userTryoutTest.routes');
@@ -16,6 +19,9 @@ const examOrderRoutes = require('./routes/examOrder.routes');
 const scoreRoutes = require('./routes/userExamAnswers.routes');
 const userExamRoutes = require('./routes/userExam.routes');
 const examScheduleRoutes = require('./routes/examSchedule.routes');
+const eventRoutes = require('./routes/event.routes');
+const classRoutes = require('./routes/class.routes');
+
 
 const authenticateRole = require('./middleware/authenticateRole'); // Sesuaikan dengan path middleware Anda
 const authenticateJWT = require('./middleware/authenticateToken');
@@ -24,6 +30,12 @@ const productRoutes = require('./routes/products.routes');
 const orderRoutes = require('./routes/orders.routes');
 const paymentRoutes = require('./routes/payments.routes');
 const transactionRoutes = require('./routes/transaction.routes');
+
+const attendanceTypeRoutes = require('./routes/attendanceType.routes');
+const sessionRoutes = require('./routes/session.routes');
+const codeAttendanceRoutes = require('./routes/codeAttendance.routes');
+const attendanceRoutes = require('./routes/attendance.routes');
+
 
 const app = express();
 
@@ -50,10 +62,13 @@ app.use('/api/users/login', registerLimiter);
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
+ 
 // Use routes
 app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api/user-accounts', userAccountRoutes); // Use userAccount routes
+app.use('/api/user-groups', userGroupRouter);
+
 app.use('/api/courses', courseRoutes); // Use course routes
 app.use('/api/payments', paymentRoutes); // Use payment routes
 app.use('/api/tryout', tryoutRoutes); // Use to routes
@@ -68,9 +83,14 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/classes', classRoutes);
+app.use('/api/attendance-types', attendanceTypeRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/code-attendance', codeAttendanceRoutes);
+app.use('/api/attendances', attendanceRoutes);   
 
-
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000 || 5001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

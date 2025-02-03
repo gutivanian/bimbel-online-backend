@@ -9,6 +9,22 @@ const Course = {
       return result.rows;
     } finally {
       client.release();
+    }  
+  }, 
+  
+  searchAll: async (search = '') => {
+    const client = await pool.connect();
+    try {
+      let query = 'SELECT id, title, description, imageUrl, courseUrl FROM courses ORDER BY title';
+      const values = [];
+      if (search) {
+        query = 'SELECT id, title, description, imageUrl, courseUrl FROM courses WHERE title ILIKE $1 ORDER BY title';
+        values.push(`%${search}%`);
+      }
+      const result = await client.query(query, values);
+      return result.rows;
+    } finally {
+      client.release();
     }
   },
 

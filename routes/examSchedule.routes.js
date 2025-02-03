@@ -1,7 +1,11 @@
-const express = require('express');
+const express = require('express'); 
 const router = express.Router();
 const examScheduleController = require('../controllers/examSchedule.controller');
 
+// Get all exam schedules with filters, sorting, and pagination
+router.get('/search', examScheduleController.searchExamSchedules);
+router.get('/all', examScheduleController.getExamSchedules);
+ 
 // Get all valid exam schedules (is_valid = true)
 router.get('/', examScheduleController.getValidExamSchedules);
 
@@ -22,4 +26,4 @@ router.delete('/:id', examScheduleController.deleteExamSchedule);
 
 router.post('/checkAccess', examScheduleController.checkExamAccess);
 
-module.exports = router;
+module.exports = router; 
