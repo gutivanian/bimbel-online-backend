@@ -117,4 +117,17 @@ UserAccount.update = (user_id, accountData, result) => {
     );
 };
 
+UserAccount.getFilterUser = async (role,search) => {
+    const query = `
+      SELECT DISTINCT userid, name 
+      FROM v_dashboard_userdata
+      WHERE name ILIKE $2 AND role = $1
+      LIMIT 5;
+    `;
+  
+    console.log(search);
+    const result = await pool.query(query, [role,`%${search}%`]);
+    return result.rows;
+  };
+
 module.exports = UserAccount;

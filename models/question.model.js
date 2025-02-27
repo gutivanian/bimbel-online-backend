@@ -13,56 +13,182 @@ const getAllQuestions = async () => {
 
 // models/questionModel.js
 
-const getPagedQuestions = async ({ limit, offset, search, type, examId, userId }) => {
+const getPagedQuestions = async (filters) => {
+  const {
+    page = 1,
+    limit = 50,
+    search = '',
+    question_type = 'All',
+    exam_id,
+    topic,
+    subtopic,
+    creator,
+    start_date,
+    end_date,
+    sortKey = 'q.id',
+    sortOrder = 'asc',
+    userId,
+  } = filters;
+
+  const offset = (page - 1) * limit;
+
+  // Define allowed sort keys to prevent SQL injection
+  const allowedSortKeys = [
+    'q.id',
+    'exam_id',
+    'exam_name',
+    'question_type',
+    'question_text',
+    'correct_answer',
+    'topic',
+    'subtopic',
+    'creator',
+    'create_date',
+    'editor',
+    'edit_date'
+  ];
+
+  // Validate sortKey and sortOrder
+  const validatedSortKey = allowedSortKeys.includes(sortKey) ? sortKey : 'q.id';
+  const validatedSortOrder = sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+
+  // Base SELECT and FROM clauses
+  const baseSelectClause = `
+    SELECT 
+      q.id,
+      q.exam_id,
+      e.name AS exam_name,
+      q.question_type,
+      q.question_text,
+      q.options,
+      q.correct_answer,
+      et.name AS subtopic,
+      et2.name AS topic,
+      COALESCE(u.name, 'admin') AS creator,
+      q.create_date::date AS create_date,
+      u2.name AS editor,
+      q.edit_date::date AS edit_date
+  `;
+
+  const baseFromClause = `
+    FROM questions q
+    LEFT JOIN exams e ON e.id = q.exam_id
+    LEFT JOIN v_dashboard_userdata u ON u.userid = q.create_user_id
+    LEFT JOIN v_dashboard_userdata u2 ON u2.userid = q.edit_user_id
+    LEFT JOIN exam_types et ON et.id = q.question_topic_type
+    LEFT JOIN exam_types et2 ON et2.id = et.id
+  `;
+
+  // Initialize WHERE clauses
+  let whereClauses = [];
+  let values = [];
+  let valueIndex = 1;
+  let filterParamsCount = 0;
+
+  if (search) {
+    whereClauses.push(`(q.question_text ILIKE $${valueIndex} OR CAST(q.id AS TEXT) ILIKE $${valueIndex})`);
+    values.push(`%${search}%`);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  if (question_type && question_type !== 'All') {
+    whereClauses.push(`q.question_type = $${valueIndex}`);
+    values.push(question_type);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  if (exam_id) {
+    whereClauses.push(`q.exam_id = $${valueIndex}`);
+    values.push(exam_id);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  if (topic) {
+    whereClauses.push(`et2.name = $${valueIndex}`);
+    values.push(topic);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  if (subtopic) {
+    whereClauses.push(`et.name = $${valueIndex}`);
+    values.push(subtopic);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  if (creator) {
+    whereClauses.push(`u.name = $${valueIndex}`);
+    values.push(creator);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  if (start_date) {
+    whereClauses.push(`q.create_date::date >= $${valueIndex}`);
+    values.push(start_date);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  if (end_date) {
+    whereClauses.push(`q.create_date::date <= $${valueIndex}`);
+    values.push(end_date);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  if (userId) {
+    whereClauses.push(`(q.create_user_id = $${valueIndex} OR q.edit_user_id = $${valueIndex})`);
+    values.push(userId);
+    valueIndex++;
+    filterParamsCount++;
+  }
+
+  // Construct WHERE clause
+  let whereClause = whereClauses.length > 0 
+    ? ' WHERE ' + whereClauses.join(' AND ')
+    : '';
+
+  // Construct the main query
+  const mainQuery = `
+    ${baseSelectClause}
+    ${baseFromClause}
+    ${whereClause}
+    ORDER BY ${validatedSortKey} ${validatedSortOrder}
+    LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
+  `;
+  values.push(limit, offset);
+
+  // Construct the count query
+  const countQuery = `
+    SELECT COUNT(*) AS total
+    FROM (
+      SELECT q.id
+      ${baseFromClause}
+      ${whereClause}
+    ) AS sub
+  `;
+
   try {
-    let query = `
-      SELECT q.id, q.exam_id, e.name AS exam_name, q.question_type, q.question_text, q.options, q.correct_answer
-      FROM questions q
-      LEFT JOIN exams e ON e.id = q.exam_id
-      WHERE 1=1
-    `;
-    const params = [];
-    let paramIndex = 1;
+    const [dataResult, countResult] = await Promise.all([
+      pool.query(mainQuery, values),
+      pool.query(countQuery, values.slice(0, filterParamsCount)),
+    ]);
 
-    // Filter berdasarkan search
-    if (search) {
-      query += ` AND (q.question_text ILIKE $${paramIndex} OR CAST(q.id AS TEXT) ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
+    const total = parseInt(countResult.rows[0].total, 10);
+    const totalPages = Math.ceil(total / limit);
 
-    // Filter berdasarkan type
-    if (type && type !== 'All') {
-      query += ` AND q.question_type = $${paramIndex}`;
-      params.push(type);
-      paramIndex++;
-    }
-
-    // Filter berdasarkan examId
-    if (examId) {
-      query += ` AND q.exam_id = $${paramIndex}`;
-      params.push(examId);
-      paramIndex++;
-    }
-
-    // Filter berdasarkan userId
-    if (userId) {
-      query += ` AND (q.create_user_id = $${paramIndex} OR q.edit_user_id = $${paramIndex})`;
-      params.push(userId);
-      paramIndex++;
-    }
-
-    // Sorting (misalnya, berdasarkan id ASC)
-    query += ` ORDER BY q.id ASC`;
-
-    // Pagination
-    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limit, offset);
-
-    const result = await pool.query(query, params);
-    return result.rows;
+    return {
+      data: dataResult.rows,
+      total,
+      totalPages,
+    };
   } catch (error) {
-    console.error('Error fetching paginated questions:', error);
+    console.error('Error fetching paged questions:', error);
     throw error;
   }
 };
@@ -154,6 +280,25 @@ const getQuestionsByExamString = async (exam_string) => {
     throw error;
   }
 };
+const getQuestionsByExamId = async (examId) => {
+  try {
+
+    const questionsResult = await pool.query('SELECT * FROM questions WHERE exam_id = $1 ORDER BY id', [examId]);
+    return {
+      questions: questionsResult.rows.map(q => ({
+        id: q.id,
+        type: q.question_type,
+        question: q.question_text,
+        options: q.options,
+        correct: q.correct_answer,
+        statements: q.statements
+      }))
+    };
+  } catch (error) {
+    console.error('Error fetching questions by examId:', error);
+    throw error;
+  }
+};
 
 const getQuestionById = async (id) => {
   try {
@@ -165,33 +310,96 @@ const getQuestionById = async (id) => {
   }
 };
 
-const createQuestion = async (questionData) => {
-  const { exam_id, question_type, question_text, options, correct_answer, statements, create_user_id } = questionData;
+const createQuestion = async (questionData, create_user_id) => {
+  const { exam_id, question_type, question_text, options, correct_answer, statements,question_topic_type } = questionData;
   try {
+
     const result = await pool.query(
       `INSERT INTO questions 
-        (exam_id, question_type, question_text, options, correct_answer, statements, create_user_id) 
+        (exam_id, question_type, question_text, options, correct_answer, statements, create_user_id, question_topic_type,edit_date) 
        VALUES 
-        ($1, $2, $3, $4, $5, $6, $7) 
+        ($1, $2, $3, $4, $5, $6, $7, $8, null) 
        RETURNING *`,
-      [exam_id, question_type, question_text, options, correct_answer, statements, create_user_id]
+      [exam_id, question_type, question_text, options, correct_answer, statements, create_user_id, question_topic_type]
     );
+
+
     return result.rows[0];
+
+
   } catch (error) {
     console.error('Error creating question:', error);
+    await pool.query(
+      'ROLLBACK'
+    )
     throw error;
   }
 };
 
+const createBulkQuestions = async (questions, create_user_id) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN'); // Start transaction
+    
+    const createdQuestions = [];
+    
+    // Prepare the query
+    const insertQuery = `
+      INSERT INTO questions 
+        (exam_id, question_type, question_text, options, correct_answer, statements, create_user_id, question_topic_type, edit_date) 
+      VALUES 
+        ($1, $2, $3, $4, $5, $6, $7, $8, null) 
+      RETURNING *
+    `;
 
-const updateQuestion = async (id, questionData) => {
+    // Insert each question
+    for (const question of questions) {
+      const { 
+        exam_id, 
+        question_type, 
+        question_text, 
+        options, 
+        correct_answer, 
+        statements,
+        question_topic_type 
+      } = question;
+
+      const result = await client.query(insertQuery, [
+        exam_id,
+        question_type,
+        question_text,
+        options,
+        correct_answer,
+        statements,
+        create_user_id,
+        question_topic_type
+      ]);
+
+      createdQuestions.push(result.rows[0]);
+    }
+
+    await client.query('COMMIT'); // Commit transaction
+    return createdQuestions;
+
+  } catch (error) {
+    await client.query('ROLLBACK'); // Rollback on error
+    console.error('Error in bulk question creation:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+
+const updateQuestion = async (id, questionData, edit_user_id) => {
   const { 
     question_text, 
     question_type, 
     options, 
     correct_answer, 
     statements, 
-    edit_user_id 
+    question_topic_type
   } = questionData;
   
   try {
@@ -204,15 +412,85 @@ const updateQuestion = async (id, questionData) => {
          correct_answer = $4::text[], 
          statements = $5::text[],
          edit_user_id = $6,
-         edit_date = NOW()
+         edit_date = NOW(),
+         question_topic_type = $8
        WHERE id = $7 
        RETURNING *`,
-      [question_text, question_type, options, correct_answer, statements, edit_user_id, id]
+      [question_text, question_type, options, correct_answer, statements, edit_user_id, id, question_topic_type]
     );
     return result.rows[0];
   } catch (error) {
     console.error('Error updating question:', error);
     throw error;
+  }
+};
+
+const updateBulkQuestions = async (questions, edit_user_id) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN'); // Start transaction
+    
+    const updatedQuestions = [];
+    
+    // Prepare the update query
+    const updateQuery = `
+      UPDATE questions 
+      SET 
+        exam_id = $1,
+        question_type = $2,
+        question_text = $3,
+        options = $4,
+        correct_answer = $5,
+        statements = $6,
+        edit_user_id = $7,
+        question_topic_type = $8,
+        edit_date = CURRENT_TIMESTAMP
+      WHERE id = $9
+      RETURNING *
+    `;
+
+    // Update each question
+    for (const question of questions) {
+      const { 
+        id,
+        exam_id, 
+        question_type, 
+        question_text, 
+        options, 
+        correct_answer, 
+        statements,
+        question_topic_type 
+      } = question;
+
+      const result = await client.query(updateQuery, [
+        exam_id,
+        question_type,
+        question_text,
+        options,
+        correct_answer,
+        statements,
+        edit_user_id,
+        question_topic_type,
+        id
+      ]);
+
+      if (result.rows.length === 0) {
+        throw new Error(`Question with ID ${id} not found`);
+      }
+
+      updatedQuestions.push(result.rows[0]);
+    }
+
+    await client.query('COMMIT'); // Commit transaction
+    return updatedQuestions;
+
+  } catch (error) {
+    await client.query('ROLLBACK'); // Rollback on error
+    console.error('Error in bulk question update:', error);
+    throw error;
+  } finally {
+    client.release();
   }
 };
 
@@ -237,5 +515,8 @@ module.exports = {
   getQuestionById,
   createQuestion,
   updateQuestion,
-  deleteQuestion
+  updateBulkQuestions,
+  createBulkQuestions,
+  deleteQuestion,
+  getQuestionsByExamId
 };

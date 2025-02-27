@@ -23,6 +23,20 @@ exports.searchAllCourses = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.getFilterCourses = async (req, res) => {
+    try {
+      const type = req.params.grp;
+      const search = req.query.search || ''; // Mengambil search query parameter
+      const courses = await Course.getFilterCourses(type,search);
+      res.status(200).json({ courses });
+    } catch (error) {
+      console.error('Error fetching group products:', error);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  };
+  
+
 exports.createCourse = async (req, res) => {
   try {
     const course = await Course.create(req.body);

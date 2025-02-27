@@ -54,12 +54,12 @@ exports.createNoCaptcha = async (req, res) => {
         });
     }
 
-    const { username, email, password, role } = req.body;
-
+    const { username, fullName, email, password, role } = req.body;
+    // console.log(req.body);
     // Validasi data input
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !fullName) {
         return res.status(400).send({
-            message: "Username, email, and password are required!"
+            message: "Username, full name, email, and password are required!"
         });
     }
 
@@ -67,7 +67,7 @@ exports.createNoCaptcha = async (req, res) => {
     const userRole = role || 'student';
 
     // Buat user baru
-    const user = new User({ username, email, password, role: userRole });
+    const user = new User({ username, fullName, email, password, role: userRole });
 
     User.create(user, (err, data) => {
         if (err) {
@@ -307,8 +307,8 @@ exports.getUserDataByRole = (req, res) => {
 };
 
 exports.searchUsersByRoleAndName = async (req, res) => {
-    const { searchTerm, role } = req.body;
- 
+    const { searchTerm, role, limit = 10 } = req.body;
+    console.log(req.bpdy)
     // Validasi input
     if (!searchTerm || typeof searchTerm !== 'string') {
         return res.status(400).json({ message: "searchTerm diperlukan dan harus berupa string." });
@@ -318,14 +318,21 @@ exports.searchUsersByRoleAndName = async (req, res) => {
         return res.status(400).json({ message: "Role diperlukan dan harus berupa string." });
     }
 
+    // Validasi limit
+    const parsedLimit = parseInt(limit);
+    if (isNaN(parsedLimit) || parsedLimit < 1) {
+        return res.status(400).json({ message: "Limit harus berupa angka positif." });
+    }
+
     try {
-        const users = await User.searchUsersByRoleAndName(role, searchTerm);
+        const users = await User.searchUsersByRoleAndName(role, searchTerm, parsedLimit);
         res.status(200).json({ users });
     } catch (error) {
         console.error('Error searching users:', error);
         res.status(500).json({ message: "Terjadi kesalahan pada server." });
     }
 };
+
 
 exports.searchUsersByMultipleRolesAndName = async (req, res) => {
     const { searchTerm, roles } = req.body;
@@ -349,19 +356,50 @@ exports.searchUsersByMultipleRolesAndName = async (req, res) => {
     }
 };
  
-exports.getPaginatedUsers = (req, res) => {
-    const { role } = req.params;
-    const { page = 1, limit = 50, search = '', sortBy = 'name', order = 'asc' } = req.query;
+ exports.getPaginatedUsers = async (req, res) => {
+  try {
+    const params = {
+      sortField: req.query.sortField || 'id',
+      sortOrder: req.query.sortOrder || 'asc',
+      search: req.query.search || '',
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 10,
+      role: req.params.role || '',
+      education: req.query.education || '',
+      city: req.query.city || '',
+      province: req.query.province || '',
+      status: req.query.status || ''
+    };
 
-    User.getPaginatedUsers({ role, page: parseInt(page), limit: parseInt(limit), search, sortBy, order }, (err, data) => {
-        if (err) {
-            res.status(500).send({ message: 'Error retrieving data', error: err.message });
-            return;
-        }
-        res.send(data); // Kirimkan data dan total jumlah data
+    const { users, total } = await User.getPaginatedUsers(params);
+
+    // const processedUsers = users.map((user) => ({
+    //   id: user.userid,
+    //   user_code: user.user_code,
+    //   nama_lengkap: user.nama_lengkap,
+    //   email: user.email,
+    //   role: user.role,
+    //   pendidikan: user.pendidikan,
+    //   kota: user.kota,
+    //   provinsi: user.provinsi,
+    //   status: user.status,
+    //   create_date: user.create_date,
+    //   create_user: user.create_user,
+    //   edit_date: user.edit_date,
+    //   edit_user: user.edit_user
+    // }));
+
+    res.json({
+      data: users,
+      total,
+      page: parseInt(params.page),
+      totalPages: Math.ceil(total / params.limit)
     });
+  } catch (error) {
+    console.error('Get Paginated Users Error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
-
 exports.getTotalUsersAndGrowthByRole = (req, res) => {
     const role = req.query.role;
 

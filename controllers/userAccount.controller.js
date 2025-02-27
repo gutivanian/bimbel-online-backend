@@ -112,3 +112,16 @@ exports.deleteUserAccount = (req, res) => {
         }
     });
 };
+
+exports.getFilterUser = async (req, res) => {
+    try {
+      const role = req.params.role;
+      const search = req.query.search || ''; // Mengambil search query parameter
+      const users = await UserAccount.getFilterUser(role,search);
+      res.status(200).json({ users });
+    } catch (error) {
+      console.error('Error fetching group products:', error);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  };
+  

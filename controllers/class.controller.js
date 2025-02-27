@@ -12,9 +12,14 @@ const getAllClasses = async (req, res) => {
       searchDate: req.query.searchDate || '',
       page: parseInt(req.query.page) || 1,
       limit: parseInt(req.query.limit) || 10,
-      status: req.query.status || ''
+      status: req.query.status || '',
+      courseId: req.query.courseId || '',
+      teacherId: req.query.teacherId || '',
+      studentId: req.query.studentId || '',
+      startDate: req.query.startDate || '',
+      endDate: req.query.endDate || ''
     };
-    // console.log('Sort Field:', params.sortField);
+    console.log('test:', params.studentId);
     const { classes, total } = await Class.getClasses(params);
     // console.log("class:", classes)
     // console.log("total:", total);

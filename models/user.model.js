@@ -2,6 +2,7 @@ const pool = require("../config/db.config");
 
 const User = function(user) {
     this.username = user.username;
+    this.fullName = user.fullName; // Tambahkan nama lengkap
     this.email = user.email;
     this.password = user.password;
     this.role = user.role; // Tambahkan role
@@ -10,7 +11,8 @@ const User = function(user) {
 // Buat pengguna baru 
 // Update fungsi create untuk memasukkan role
 User.create = (newUser, result) => {
-    pool.query(
+    console.log(newUser)
+    usercreated = pool.query(
         "INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *",
         [newUser.username, newUser.email, newUser.password, newUser.role], // Tambahkan role di sini
         (err, res) => {
@@ -19,10 +21,24 @@ User.create = (newUser, result) => {
                 result(err, null);
                 return;
             }
-            console.log("created user: ", res.rows[0]);
+            pool.query(
+                "INSERT INTO user_account (user_id, nama_lengkap, is_manual) VALUES ($1, $2, false)",
+                [res.rows[0].user_id, newUser.fullName]
+            )
+            console.log("created user: ", res.rows[0].user_id);
             result(null, res.rows[0]);
         }
     );
+
+    // pool.query(
+    //     "INSERT INTO user_account (user_id, nama_lengkap, is_manual),VALUES ($1, $2, false)",
+    //     [usercreated.user_id, newUser.fullname]
+    // )
+    // if(newUser.fullname) {
+    //     const userId = pool.query(
+    //         "SELECT user_id from users where username = $1",
+    //     )
+    // }
 }; 
 
 // Delete user by ID
@@ -209,41 +225,101 @@ User.getUserDataByRole = (role, result) => {
     );
 };
 
-User.getPaginatedUsers = async ({ role, page, limit, search, sortBy, order }, result) => {
-    const offset = (page - 1) * limit; // Hitung offset berdasarkan halaman
-
-    const query = `
-        SELECT 
-            *
-        FROM v_dashboard_UserData
-        WHERE role = $1
-        AND (LOWER(name) LIKE $2 OR LOWER(email) LIKE $2)
-        ORDER BY ${sortBy} ${order}
-        LIMIT $3 OFFSET $4
+User.getPaginatedUsers = async (options = {}) => {
+    const {
+      sortField = 'id',
+      sortOrder = 'asc',
+      search = '',
+      page = 1,
+      limit = 10,
+      role = '',
+      education = '',
+      city = '',
+      province = '',
+      status = ''
+    } = options;
+  
+    const offset = (page - 1) * limit;
+    let query = `
+    WITH filtered_users AS (
+      SELECT 
+        userid id,*
+      FROM v_dashboard_UserData u
+      WHERE 1=1
     `;
-
-    const countQuery = `
-        SELECT COUNT(*) AS total
-        FROM v_dashboard_UserData
-        WHERE role = $1
-        AND (LOWER(name) LIKE $2 OR LOWER(email) LIKE $2)
-    `;
-
-    const values = [role, `%${search.toLowerCase()}%`, limit, offset];
-    const countValues = [role, `%${search.toLowerCase()}%`];
-
-    try {
-        const data = await pool.query(query, values);
-        const count = await pool.query(countQuery, countValues);
-
-        result(null, {
-            rows: data.rows,
-            total: parseInt(count.rows[0].total, 10), // Total jumlah data
-        });
-    } catch (error) {
-        result(error, null);
+  
+    const values = [];
+    const conditions = [];
+  
+    // Filter by role
+    if (role && role !== 'All') {
+      values.push(role);
+      conditions.push(`AND u.role = $${values.length}`);
     }
-};
+  
+    // Filter by education
+    if (education && education !== 'All') {
+      values.push(education);
+      conditions.push(`AND u.pendidikan = $${values.length}`);
+    }
+  
+    // Filter by city
+    if (city && city !== 'All') {
+      values.push(city);
+      conditions.push(`AND u.kota = $${values.length}`);
+    }
+  
+    // Filter by province
+    if (province && province !== 'All') {
+      values.push(province);
+      conditions.push(`AND u.provinsi = $${values.length}`);
+    }
+  
+    // Filter by status
+    if (status && status !== 'All') {
+      values.push(status);
+      conditions.push(`AND u.status = $${values.length}`);
+    }
+  
+    // Search in user_code, nama_lengkap, and email
+    if (search) {
+      values.push(`%${search}%`);
+      values.push(`%${search}%`);
+      values.push(`%${search}%`);
+      conditions.push(`AND (
+        u.user_code ILIKE $${values.length - 2} OR 
+        u.nama_lengkap ILIKE $${values.length - 1} OR 
+        u.email ILIKE $${values.length}
+      )`);
+    }
+  
+    if (conditions.length > 0) {
+      query += conditions.join(' ');
+    }
+  
+    query += `) 
+      SELECT 
+        *, 
+        COUNT(*) OVER() AS total 
+      FROM filtered_users
+    `;
+  
+    // Sorting
+    const validSortFields = ['userid', 'user_code', 'nama_lengkap', 'email', 'pendidikan', 'kota', 'provinsi', 'status'];
+    if (validSortFields.includes(sortField.toLowerCase()) && ['asc', 'desc'].includes(sortOrder.toLowerCase())) {
+      query += ` ORDER BY ${sortField} ${sortOrder.toUpperCase()}`;
+    } else {
+      query += ` ORDER BY userid ASC`;
+    }
+  
+    query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+    
+    const result = await pool.query(query, [...values, limit, offset]);
+    return {
+      users: result.rows,
+      total: result.rows.length > 0 ? result.rows[0].total : 0
+    };
+  };
 
 User.getTotalUsersAndGrowthByRole = async (role, result) => {
     try {
@@ -543,15 +619,19 @@ User.getUserDetailsById = (userId, result) => {
     });
 };
  
-User.searchUsersByRoleAndName = async (role, searchTerm) => {
+User.searchUsersByRoleAndName = async (role, searchTerm, limit) => {
     const query = `
-        SELECT userid, name
+        SELECT userid, name, username
         FROM v_dashboard_userdata
-        WHERE role = $1 AND name ILIKE $2
+        WHERE role = $1 
+        AND (
+            name ILIKE $2 
+            OR username ILIKE $2
+        )
         ORDER BY name ASC
-        LIMIT 50
+        LIMIT $3
     `;
-    const values = [role, `%${searchTerm}%`];
+    const values = [role, `%${searchTerm}%`, limit];
 
     try {
         const res = await pool.query(query, values);

@@ -47,9 +47,11 @@ const getSessionById = async (id) => {
             fs.start_time,
             fs.end_time,
             fs.create_date,
-            fs.update_date
+            fs.update_date,
+            e.assigned_to
         FROM fSession fs
         LEFT JOIN Users u ON fs.create_user_id = u.id
+        LEFT JOIN events e on e.id = fs.eventid
         WHERE fs.id = $1
     `;
     const result = await pool.query(query, [id]);
@@ -66,9 +68,11 @@ const getSessionByEventId = async (id) => {
             fs.start_time,
             fs.end_time,
             fs.create_date,
-            fs.update_date
+            fs.update_date,
+            e.assigned_to
         FROM fSession fs
         LEFT JOIN Users u ON fs.create_user_id = u.id
+        LEFT JOIN events e on e.id = fs.eventid
         WHERE fs.eventid = $1
         ORDER BY fs.create_date DESC
         LIMIT 1

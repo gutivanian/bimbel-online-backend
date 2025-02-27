@@ -9,6 +9,8 @@ router.post('/save-account', authenticateJWT, (req, res, next) => {
     next();
 }, userAccountController.saveUserAccount);
 
+router.get('/filter/:role', userAccountController.getFilterUser);
+
 // Route untuk mengambil data user account berdasarkan user_id
 router.get('/:user_id', authenticateJWT, userAccountController.getUserAccount);
 

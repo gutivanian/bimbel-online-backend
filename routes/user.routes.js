@@ -47,6 +47,7 @@ router.get('/role/all/:role', userController.getUserDataByRole);
 router.get('/role/:role', userController.getPaginatedUsers);
 
 router.post('/users/search', userController.searchUsersByRoleAndName);
+
 router.post('/search-by-roles', userController.searchUsersByMultipleRolesAndName);
 
 

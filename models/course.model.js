@@ -28,6 +28,19 @@ const Course = {
     }
   },
 
+  getFilterCourses : async (type,search) => {
+    const query = `
+      SELECT DISTINCT c.id, c.title 
+      FROM courses c left join product_type pt on c."type"  = pt.id 
+      WHERE c.title ILIKE $2 AND pt.group_product = $1
+      LIMIT 5;
+    `;
+  
+    console.log(search);
+    const result = await pool.query(query, [type,`%${search}%`]);
+    return result.rows;
+  },
+
   create: async (course) => {
     const { title, description, imageUrl } = course;
     const client = await pool.connect();

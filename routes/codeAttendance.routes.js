@@ -19,10 +19,10 @@ router.post('/check-and-generate-from-event/:event_id', authenticateJWT, CodeAtt
 
 // Endpoint untuk validasi QR Code
 
-router.post('/validate-qrcode', CodeAttendanceController.validateQRCode);
+router.post('/validate-qrcode',authenticateJWT, CodeAttendanceController.validateQRCode);
  
 // Endpoint untuk validasi token
-router.post('/validate-token', CodeAttendanceController.validateToken);
+router.post('/validate-token', authenticateJWT,CodeAttendanceController.validateToken);
 
 // Endpoint untuk mengupdate status code attendance
 router.put('/update-status', authenticateJWT, CodeAttendanceController.updateCodeAttendanceStatus);

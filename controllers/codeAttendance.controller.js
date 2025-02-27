@@ -3,6 +3,7 @@ const CodeAttendance = require('../models/codeAttendance.model');
 const { generateUniqueToken } = require('../utils/attendanceTokenGenerator'); // Import fungsi token generator
 const QRCode = require('qrcode');
 const Session = require('../models/session.model');
+const Attendance = require('../models/attendance.model');
 const { v4: uuidv4 } = require('uuid');
 
 
@@ -239,11 +240,11 @@ const checkAndGenerateCodeAttendance = async (req, res) => {
 };
 
 const validateQRCode = async (req, res) => {
-    const { qrCode } = req.body;
-  
+    const { qrCode, longitude, latitude } = req.body;
+    const user_id = req.user.id
     try {
       const qrData = JSON.parse(qrCode); // Mengambil data JSON dari QR Code
-      const { session_id, token } = qrData;
+      const { session_id, token, reff_user_id, type_id } = qrData;
   
       // Cek apakah QR Code valid
       const codeAttendance = await CodeAttendance.getCodeAttendanceByToken(token);
@@ -251,7 +252,36 @@ const validateQRCode = async (req, res) => {
       if (!codeAttendance || new Date(codeAttendance.expiration_time) < new Date()) {
         return res.status(400).json({ message: 'QR Code tidak valid atau sudah kadaluarsa.' });
       }
-  
+
+        const session = await Session.getSessionById(session_id);
+        if (!session) {
+            return res.status(404).json({ message: 'Session not found' });
+        }
+
+        const assignedUsers = session.assigned_to || []; // Handle null/undefined
+        if (!Array.isArray(assignedUsers)) {
+          return res.status(500).json({ message: 'Format data sesi tidak valid' });
+        }
+
+        const generatenotes = (type_id, user_id, session_id) =>{
+            if(type_id === 1){
+                return `Presensi masuk user ${user_id} dalam session ${session_id}.`
+            } else if(type_id === 2){
+                return `Presensi keluar user ${user_id} dalam session ${session_id}.`
+            }
+        }
+        const attendanceData = {
+            userid: user_id,
+            reff_userid: reff_user_id,
+            type_id,
+            notes : generatenotes(type_id, user_id,session_id),
+            latitude,
+            longitude,
+            session_id,
+        };
+
+        const result = await Attendance.createAttendance(attendanceData);
+        
       // Simpan ke database (misalnya tabel presensi)
       // Simpan ke tabel presensi atau yang sesuai
       // Presensi sudah berhasil divalidasi dan disimpan
@@ -265,8 +295,8 @@ const validateQRCode = async (req, res) => {
   };
   
   const validateToken = async (req, res) => {
-    const { token } = req.body;
-  
+    const { token,longitude, latitude } = req.body;
+    const user_id = req.user.id
     try {
       // Cek apakah token valid
       const codeAttendance = await CodeAttendance.getCodeAttendanceByToken(token);
@@ -274,7 +304,34 @@ const validateQRCode = async (req, res) => {
       if (!codeAttendance || new Date(codeAttendance.expiration_time) < new Date()) {
         return res.status(400).json({ message: 'Token tidak valid atau sudah kadaluarsa.' });
       }
-  
+      const session = await Session.getSessionById(session_id);
+      if (!session) {
+          return res.status(404).json({ message: 'Session not found' });
+      }
+
+      const assignedUsers = session.assigned_to || []; // Handle null/undefined
+      if (!Array.isArray(assignedUsers)) {
+        return res.status(500).json({ message: 'Format data sesi tidak valid' });
+      }
+
+      const generatenotes = (type_id, user_id, session_id) =>{
+          if(type_id === 1){
+              return `Presensi masuk user ${user_id} dalam session ${session_id}.`
+          } else if(type_id === 2){
+              return `Presensi keluar user ${user_id} dalam session ${session_id}.`
+          }
+      }
+      const attendanceData = {
+          userid: user_id,
+          reff_userid: reff_user_id,
+          type_id,
+          notes : generatenotes(type_id, user_id,session_id),
+          latitude,
+          longitude,
+          session_id,
+      };
+
+      const result = await Attendance.createAttendance(attendanceData);
       // Simpan ke database (misalnya tabel presensi)
       // Simpan ke tabel presensi atau yang sesuai
       // Presensi sudah berhasil divalidasi dan disimpan

@@ -27,6 +27,7 @@ const authenticateRole = require('./middleware/authenticateRole'); // Sesuaikan 
 const authenticateJWT = require('./middleware/authenticateToken');
 
 const productRoutes = require('./routes/products.routes');
+const productTypeRoutes = require('./routes/productType.routes');
 const orderRoutes = require('./routes/orders.routes');
 const paymentRoutes = require('./routes/payments.routes');
 const transactionRoutes = require('./routes/transaction.routes');
@@ -60,9 +61,9 @@ app.use('/api/users/register', registerLimiter);
 app.use('/api/users/login', registerLimiter);
 
 app.use(helmet());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
- 
+// Menyesuaikan ukuran maksimal body yang diterima
+app.use(bodyParser.json({ limit: '50mb' })); // batas ukuran payload menjadi 50MB
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 // Use routes
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
@@ -89,6 +90,7 @@ app.use('/api/attendance-types', attendanceTypeRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/code-attendance', codeAttendanceRoutes);
 app.use('/api/attendances', attendanceRoutes);   
+app.use('/api/productType', productTypeRoutes)
 
 const PORT = process.env.PORT || 5000 || 5001;
 app.listen(PORT, () => {

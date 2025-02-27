@@ -7,4 +7,4 @@ router.post('/updateScoreAndAnswers', examController.updateScoreAndAnswers);
 router.post('/submit', examController.submitAnswers);
 
 module.exports = router;
- 
+  

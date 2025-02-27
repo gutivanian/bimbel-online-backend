@@ -5,9 +5,11 @@ const getExamSchedules = async (req, res) => {
   try {
     const filters = {
       page: parseInt(req.query.page) || 1,
-      limit: parseInt(req.query.limit) || 50,
+      limit: parseInt(req.query.limit) || 999,
       search: req.query.search || '',
       exam_type: req.query.exam_type || 'All',
+      group_product: req.query.group_product || 'All',
+      series: req.query.series || 'All',
       isfree: req.query.isfree || 'All',
       is_valid: req.query.is_valid || 'All',
       start_time: req.query.start_time || null,
@@ -84,9 +86,9 @@ const getExamSchedulesByType = async (req, res) => {
 
 // Create a new exam schedule
 const createExamSchedule = async (req, res) => {
-  const { name, description, exam_id_list, start_time, end_time, is_valid, created_by, exam_type } = req.body;
+  const { name, description, exam_id_list, start_time, end_time,isfree, is_valid, created_by, exam_type } = req.body;
   try {
-    const newSchedule = await examScheduleModel.createExamSchedule(name, description, exam_id_list, start_time, end_time, is_valid, created_by, exam_type);
+    const newSchedule = await examScheduleModel.createExamSchedule(name, description, exam_id_list, start_time, end_time,isfree, is_valid, created_by, exam_type);
     res.status(201).json(newSchedule);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -147,6 +149,7 @@ const checkExamAccess = async (req, res) => {
 module.exports = {
   checkExamAccess,
   getExamSchedules,
+  
   searchExamSchedules,
   getValidExamSchedules,
   getExamScheduleById,

@@ -1,25 +1,29 @@
-    const express = require('express');
+const express = require('express');
 const router = express.Router();
 const questionController = require('../controllers/question.controller');
- 
-// Route untuk mengambil semua pertanyaan
-router.get('/', questionController.getAllQuestions);
+const authenticateJWT = require('../middleware/authenticateToken');
 
-router.get('/paged', questionController.getPagedQuestions);
+// Route untuk mengambil semua pertanyaan
+router.get('/',authenticateJWT, questionController.getAllQuestions);
+
+router.get('/paged', authenticateJWT,questionController.getPagedQuestions);
 
 
 // Route untuk mengambil pertanyaan berdasarkan exam_string
-router.get('/byExamString', questionController.getQuestionsByExamString); // Route baru
+router.get('/byExamString',authenticateJWT, questionController.getQuestionsByExamString); // Route baru
+router.get('/byExamId',authenticateJWT, questionController.getQuestionsByExamId); // Route baru
 
 // Route untuk mengambil pertanyaan berdasarkan ID
-router.get('/:id', questionController.getQuestionById);
+router.get('/:id',authenticateJWT, questionController.getQuestionById);
 
 // Route untuk membuat pertanyaan baru
-router.post('/', questionController.createQuestion);
+router.post('/',authenticateJWT, questionController.createQuestion);
+router.post('/bulk',authenticateJWT, questionController.createBulkQuestions);
 
 // Route untuk memperbarui pertanyaan berdasarkan ID
-router.put('/:id', questionController.updateQuestion);
- 
-router.delete('/:id', questionController.deleteQuestion);
+router.put('/:id', authenticateJWT,questionController.updateQuestion);
+router.put('/bulk', authenticateJWT, questionController.updateBulkQuestions);
+
+router.delete('/:id',authenticateJWT, questionController.deleteQuestion);
 
 module.exports = router; 
